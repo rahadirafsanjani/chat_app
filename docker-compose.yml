@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: bundle exec rails server -b 0.0.0.0
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    networks:
+      - redis-net
+
+  redis:
+    image: redis:6.0-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
+    networks:
+      - redis-net
+    volumes:
+      - redis-data:/data
+
+  db_setup:
+    build: .
+    command: >
+      bash -c "
+        bundle exec rails db:setup &&
+        bundle exec rails db:migrate &&
+        bundle exec rails db:seed
+      "
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+    networks:
+      - redis-net
+    environment:
+      REDIS_URL: redis://redis:6379/0
+
+networks:
+  redis-net:
+
+volumes:
+  redis-data:
